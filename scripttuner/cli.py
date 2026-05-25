@@ -36,6 +36,8 @@ from scripttuner.preprocessing.pairs import (
     convert_to_formal,
 )
 from scripttuner.preprocessing.stats import compute_stats
+from scripttuner.training.formatters import MODEL_KEYS, format_split_folder
+from scripttuner.training.split import split_by_speaker, write_split_files
 
 DEFAULT_DATASETS_DIR = Path("datasets")
 DEFAULT_DATA_DIR = Path("data")
@@ -177,6 +179,65 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Skip POS-based stats (lexical density, phrasal verbs).",
     )
 
+    sp = subparsers.add_parser(
+        "split",
+        help="Create speaker-aware train/validation/test splits from Pair JSONL.",
+    )
+    sp.add_argument("corpus", choices=sorted(CORPORA), help="Corpus name.")
+    sp.add_argument(
+        "--input",
+        type=Path,
+        default=None,
+        help="Input Pair JSONL (default: <data-dir>/pairs/<SOURCE>/_all.jsonl).",
+    )
+    sp.add_argument(
+        "--data-dir",
+        type=Path,
+        default=DEFAULT_DATA_DIR,
+        help=f"Base data directory (default: {DEFAULT_DATA_DIR}).",
+    )
+    sp.add_argument(
+        "--output-dir",
+        type=Path,
+        default=None,
+        help=(
+            "Output split directory "
+            "(default: <data-dir>/finetune/<SOURCE>/splits)."
+        ),
+    )
+    sp.add_argument("--seed", type=int, default=42)
+    sp.add_argument("--train-ratio", type=float, default=0.8)
+    sp.add_argument("--validation-ratio", type=float, default=0.1)
+    sp.add_argument("--test-ratio", type=float, default=0.1)
+
+    fm = subparsers.add_parser(
+        "format",
+        help="Format fine-tuning splits for a target model family.",
+    )
+    fm.add_argument("model_key", choices=sorted(MODEL_KEYS), help="Target model key.")
+    fm.add_argument("corpus", choices=sorted(CORPORA), help="Corpus name.")
+    fm.add_argument(
+        "--data-dir",
+        type=Path,
+        default=DEFAULT_DATA_DIR,
+        help=f"Base data directory (default: {DEFAULT_DATA_DIR}).",
+    )
+    fm.add_argument(
+        "--splits-dir",
+        type=Path,
+        default=None,
+        help="Input split directory (default: <data-dir>/finetune/<SOURCE>/splits).",
+    )
+    fm.add_argument(
+        "--output-dir",
+        type=Path,
+        default=None,
+        help=(
+            "Output formatted directory "
+            "(default: <data-dir>/finetune/<SOURCE>/formatted/<model_key>)."
+        ),
+    )
+
     rn = subparsers.add_parser(
         "run",
         help="End-to-end pipeline for one file: parse > clean > monologue > pairs > stats.",
@@ -306,6 +367,48 @@ def _run_stats(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_split(args: argparse.Namespace) -> int:
+    source = _source_name(args.corpus)
+    in_path = args.input or (args.data_dir / "pairs" / source / "_all.jsonl")
+    out_dir = args.output_dir or (args.data_dir / "finetune" / source / "splits")
+    pairs = read_jsonl(in_path, Pair)
+    splits = split_by_speaker(
+        pairs,
+        train_ratio=args.train_ratio,
+        validation_ratio=args.validation_ratio,
+        test_ratio=args.test_ratio,
+        seed=args.seed,
+    )
+    manifest = write_split_files(
+        splits,
+        output_dir=out_dir,
+        source_path=in_path,
+        seed=args.seed,
+        ratios=(args.train_ratio, args.validation_ratio, args.test_ratio),
+    )
+    print(f"OK: wrote fine-tuning splits to {out_dir} ({manifest['counts']})")
+    return 0
+
+
+def _run_format(args: argparse.Namespace) -> int:
+    source = _source_name(args.corpus)
+    splits_dir = args.splits_dir or (args.data_dir / "finetune" / source / "splits")
+    out_dir = (
+        args.output_dir
+        or (args.data_dir / "finetune" / source / "formatted" / args.model_key)
+    )
+    manifest = format_split_folder(
+        splits_dir=splits_dir,
+        output_dir=out_dir,
+        model_key=args.model_key,
+    )
+    print(
+        f"OK: wrote {manifest['format']} fine-tuning data for "
+        f"{args.model_key} to {out_dir} ({manifest['counts']})"
+    )
+    return 0
+
+
 def _run_run(args: argparse.Namespace) -> int:
     """End-to-end pipeline orchestrator. Reuses per-stage _run_* via argparse.Namespace."""
     source = _source_name(args.corpus)
@@ -361,6 +464,8 @@ _COMMANDS = {
     "monologue": _run_monologue,
     "pairs": _run_pairs,
     "stats": _run_stats,
+    "split": _run_split,
+    "format": _run_format,
     "run": _run_run,
 }
 
