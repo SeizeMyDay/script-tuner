@@ -17,7 +17,7 @@ SBC016 한 파일에 대해 `scripttuner run sbcsae SBC016` (parse -> clean -> m
 | M13 | SBCSAE 60개 확장 적용 | ✅ 완료 | 60개 SBCSAE 파일 배치 전처리 완료. API 기반 LLM 변환 결과를 프로젝트 구조에 맞게 `data/pairs/SBCSAE/_all.jsonl`로 배치했고, 집계 통계는 `data/stats/SBCSAE/_aggregate.json`에 추가. |
 | 이후 | 진단 모듈 / 변환 모델 / 백엔드 / UI | 미정 | 본격 학습 및 서비스화 단계에서 구체화 |
 
-## 2026-05-25 업데이트
+## 2026-05-25 업데이트 (1)
 
 - **M13 완료 범위**: SBCSAE 60개 파일 확장 전처리 완료. `data/training_ready_pre_llm/SBCSAE` 기준 총 monologue 수는 1,757개.
 - **LLM 변환 산출물 반영**: 팀원이 API를 통해 생성한 post-LLM Pair 데이터 `data_sbc/_all.jsonl`을 프로젝트 구조에 맞게 `data/pairs/SBCSAE/_all.jsonl`로 추가.
@@ -52,7 +52,7 @@ SBC016 한 파일에 대해 `scripttuner run sbcsae SBC016` (parse -> clean -> m
 - **few-shot 도입 시점** — 현재 zero-shot 결과가 양호하므로, 추가 corpus/평가 이슈를 보고 결정
 - **정량 평가 metric** — 본격 학습 단계 진입 후 BLEU, embedding similarity 등 도입 결정
 
-## 2026-05-25 update: fine-tuning preparation
+## 2026-05-25 update (2): fine-tuning preparation
 
 - Added fine-tuning preparation modules under `scripttuner/training/`.
 - Added style-control definitions for `<STYLE=casual>` and `<STYLE=semi_formal>`.
@@ -73,7 +73,7 @@ SBC016 한 파일에 대해 `scripttuner run sbcsae SBC016` (parse -> clean -> m
 - Added `docs/design/finetuning_pipeline.md` for the fine-tuning preparation flow.
 - Verification completed with Python compile checks and actual CLI split/format runs. `pytest` and `ruff` were not available in the local `.venv`.
 
-## 2026-05-25 업데이트: 파인튜닝 사전 준비 상세 정리
+## 2026-05-25 업데이트 (2): 파인튜닝 사전 준비 상세 정리
 
 ### 작업 목적
 
